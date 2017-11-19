@@ -1,4 +1,4 @@
-# MSS
+# CTLMON
 Certificate Transparency Log Monitor
 
 Search online Certificate Transparency Log service (http://crt.sh) for certificates issued to your domains
