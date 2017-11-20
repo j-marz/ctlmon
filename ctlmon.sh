@@ -26,7 +26,7 @@ timestamp="$(date '+%Y_%m_%d__%H_%M_%S')"
 banner="CTLMON v0.1 - https://github.com/j-marz/ctlmon"
 
 # import main configuration
-source $config
+source "$config"
 
 # syslog function
 function log {
@@ -38,7 +38,7 @@ function dependency_check {
 	log "checking dependencies"
 	for dependency in "${dependencies[@]}"
 		do
-			if [ ! -x "$(command -v $dependency)" ]; then
+			if [ ! -x "$(command -v "$dependency")" ]; then
 		    	log "$dependency dependency does not exist - please install using 'apt-get install $dependency'"
 		    	abort
 			fi
@@ -84,10 +84,10 @@ function dir_check {
 
 # check HTTP response code from cURL
 function check_rsp {
-	if [ $1 -eq 200 ]; then
+	if [ "$1" -eq 200 ]; then
 		log "http status code: $1 - certificates found for $domain"
 		echo "http status code: $1 - certificates found for $domain"
-	elif [ $1 -eq 404 ]; then
+	elif [ "$1" -eq 404 ]; then
 		log "http status code: $1 - no certificates found for $domain"
 		echo "http status code: $1 - no certificates found for $domain"
 		# should add retry here incase server error
@@ -104,14 +104,14 @@ function check_rsp {
 function process_results {
 	# set file path variables
 	existing_file="results/$domain/$domain.json"
-	archive_file="results/$domain/archive/$domain_$timestamp.json"
+	archive_file="results/$domain/archive/$domain-$timestamp.json"
 	changelog="results/$domain/changelog.txt"
 	if [ -f "$existing_file" ]; then
-		log "previous results for $1 found - comparing sha256 hash"
-		echo "previous results for $1 found - comparing sha256 hash"
+		log "previous results for $domain found - comparing sha256 hash"
+		echo "previous results for $domain found - comparing sha256 hash"
 		# calc sha256sum of crt.sh results
-		new_hash="$(sha256sum $crtsh_results | awk -F "  " '{print $1}')"
-		old_hash="$(sha256sum $existing_file | awk -F "  " '{print $1}')"
+		new_hash="$(sha256sum "$crtsh_results" | awk -F "  " '{print $1}')"
+		old_hash="$(sha256sum "$existing_file" | awk -F "  " '{print $1}')"
 		if [ "$new_hash" = "$old_hash" ]; then
 			log "results are identical for $domain - no new certificates found"
 			echo "results are identical for $domain - no new certificates found"
@@ -121,34 +121,40 @@ function process_results {
 		else
 			log "results are different for $domain - analysing new data"
 			echo "results are different for $domain - analysing new data"
-			cert_names="$(grep '^{' $crtsh_results | jq '.name_value' | awk -F '"' '{print $2}')"
-			old_cert_names="$(grep '^{' $existing_file | jq '.name_value' | awk -F '"' '{print $2}')"
-			diff_cert_names="$(diff $old_cert_names $cert_names | grep '>' | awk -F '> ' '{print $2}')"	#### needs to be reviewed
+			cert_names="$(grep '^{' "$crtsh_results" | jq '.name_value' | awk -F '"' '{print $2}')"
+			old_cert_names="$(grep '^{' "$existing_file" | jq '.name_value' | awk -F '"' '{print $2}')"
+			diff_cert_names="$(diff "$old_cert_names" "$cert_names" | grep '>' | awk -F '> ' '{print $2}')"	#### needs to be reviewed
 			new_cert_count="$(echo "$diff_cert_names" | wc -l)"
 			log "$new_cert_count new certificates found for $domain"
 			echo "$new_cert_count new certificates found for $domain"
-			echo "$(date)" >> $changelog
-			echo "------------------------------------" >> $changelog
-			echo "$new_cert_count new certificates found for $domain" >> $changelog
-			echo "$diff_cert_names" >> $changelog
-			echo "" >> $changelog
+			# update changelog
+			{ 
+				date
+				echo "------------------------------------"
+				echo "$new_cert_count new certificates found for $domain"
+				echo "$diff_cert_names"
+				echo "" 
+			} >> "$changelog"
 			mv "$existing_file" "$archive_file"
 			log "$existing_file moved to to $archive_file"
 			mv "$crtsh_results" "$existing_file"
 			log "$crtsh_results moved to $existing_file"
 		fi
 	else
-		log "previous results for $1 not found - this is the first detection for $domain domain"
-		echo "previous results for $1 not found - this is the first detection for $domain domain"
-		cert_names="$(grep '^{' $crtsh_results | jq '.name_value' | awk -F '"' '{print $2}')"
+		log "previous results for $domain not found - this is the first detection for $domain domain"
+		echo "previous results for $domain not found - this is the first detection for $domain domain"
+		cert_names="$(grep '^{' "$crtsh_results" | jq '.name_value' | awk -F '"' '{print $2}')"
 		new_cert_count="$(echo "$cert_names" | wc -l)"
 		log "$new_cert_count new certificates found for $domain"
 		echo "$new_cert_count new certificates found for $domain"
-		echo "$(date)" >> $changelog
-		echo "------------------------------------" >> $changelog
-		echo "$new_cert_count new certificates found for $domain" >> $changelog
-		echo "$cert_names" >> $changelog
-		echo "" >> $changelog
+		# update changelog
+		{
+			date
+			echo "------------------------------------"
+			echo "$new_cert_count new certificates found for $domain"
+			echo "$cert_names"
+			echo ""
+		} >> "$changelog"
 		mv "$crtsh_results" "$existing_file"
 		log "$crtsh_results moved to $existing_file"
 	fi
@@ -172,11 +178,11 @@ function finish {
 # send email function
 function send_email {
 	# check email addresses in config
-	if [ -z $recipient_email ]; then
+	if [ -z "$recipient_email" ]; then
 		log "Recipient email missing from config - email notification will be skipped"
 		echo "Recipient email missing from config - email notification will be skipped"
 		loop_control="continue"
-	elif [ -z $sender_email ]; then
+	elif [ -z "$sender_email" ]; then
 		log "Sender email missing from config - email notification will be skipped"
 		echo "Sender email missing from config - email notification will be skipped"
 		loop_control="continue"
@@ -186,8 +192,8 @@ function send_email {
 		email_body="New certificates issued for $domain domain detected! \nReview the list of certificates below: \n\n$cert_names"
 		# send the email
 		echo -e "$email_body" | mail -s "$email_subject" \
-			$recipient_email \
-			-a From:$sender_email \
+			"$recipient_email" \
+			-a From:"$sender_email" \
 			-a X-Application:"$banner" \
 			-a Content-Type:"text/plain"
 		# log
@@ -209,7 +215,7 @@ file_check "$config"
 file_check "$domains"
 
 # main loop
-while read domain; do
+while read -r domain; do
 	log "Domain: $domain"
 	echo "Domain: $domain"
 	# check if domain dir exists
@@ -220,11 +226,11 @@ while read domain; do
 	sleep 1
 	# search for certs
 	crtsh_results="/tmp/$domain.json"
-	curl -w '\n%{http_code}\n' "https://crt.sh/?q=%.$domain&output=json" > $crtsh_results	# add newlines to separate status code from json response
+	curl -w '\n%{http_code}\n' "https://crt.sh/?q=%.$domain&output=json" > "$crtsh_results"	# add newlines to separate status code from json response
 	# check http status code
 	declare -i crtsh_status	# only allow integer for http status code
-	crtsh_status="$(tail -n 1 $crtsh_results)" # last line contains http_code from cURL
-	check_rsp $crtsh_status
+	crtsh_status="$(tail -n 1 "$crtsh_results")" # last line contains http_code from cURL
+	check_rsp "$crtsh_status"
 	# loop control for functions
 		if [[ $loop_control = "continue" ]]; then
 			# clear variable
@@ -232,7 +238,7 @@ while read domain; do
 			continue
 		fi
 	# analyse the crt.sh json and process files
-	process_results
+	process_results "$@"
 	# loop control for functions
 		if [[ $loop_control = "continue" ]]; then
 			# clear variable
@@ -247,7 +253,7 @@ while read domain; do
 			loop_control=""
 			continue
 		fi
-done < $domains
+done < "$domains"
 
 # done
 finish
