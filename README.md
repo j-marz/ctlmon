@@ -1,8 +1,8 @@
 # CTLMON
 Certificate Transparency Log Monitor
 
-Search online Certificate Transparency Log service (http://crt.sh) for certificates issued to your domains
-Store certificate info in JSON documents for historical records and alert on changes or newly issued certificates via email
+Search online Certificate Transparency Log service (http://crt.sh) for certificates issued to your domains.
+Store certificate info in JSON documents for historical records and alert on changes or newly issued certificates via email.
 
 ## Dependencies
 * mail
