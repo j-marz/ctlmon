@@ -21,4 +21,5 @@ Install all dependencies on Ubuntu using `sudo apt-get install mailutils curl di
 
 ## Automate
 Add the following cron job using `crontab -e` to run the script automatically at 9:00AM every day
-`0 9 * * * ./ctlmon.sh > /dev/null`
+`0 9 * * * cd <path to cloned repo> && <path to cloned repo>/ctlmon.sh > /dev/null`
+`0 9 * * * cd $HOME/ctlmon && $HOME/ctlmon/ctlmon.sh > /dev/null`
