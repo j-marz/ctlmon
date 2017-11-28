@@ -123,7 +123,7 @@ function process_results {
 			echo "results are different for $domain - analysing new data"
 			cert_names="$(grep '^{' "$crtsh_results" | jq '.name_value' | awk -F '"' '{print $2}')"
 			old_cert_names="$(grep '^{' "$existing_file" | jq '.name_value' | awk -F '"' '{print $2}')"
-			diff_cert_names="$(diff "$old_cert_names" "$cert_names" | grep '>' | awk -F '> ' '{print $2}')"	#### needs to be reviewed
+			diff_cert_names="$(diff <(echo "$old_cert_names") <(echo "$cert_names") | grep '>' | awk -F '> ' '{print $2}')"
 			new_cert_count="$(echo "$diff_cert_names" | wc -l)"
 			log "$new_cert_count new certificates found for $domain"
 			echo "$new_cert_count new certificates found for $domain"
@@ -144,6 +144,7 @@ function process_results {
 		log "previous results for $domain not found - this is the first detection for $domain domain"
 		echo "previous results for $domain not found - this is the first detection for $domain domain"
 		cert_names="$(grep '^{' "$crtsh_results" | jq '.name_value' | awk -F '"' '{print $2}')"
+		diff_cert_names="$cert_names"	# hack to make emails consistent
 		new_cert_count="$(echo "$cert_names" | wc -l)"
 		log "$new_cert_count new certificates found for $domain"
 		echo "$new_cert_count new certificates found for $domain"
@@ -189,7 +190,7 @@ function send_email {
 	else
 		#### TO DO #### need to add options for SMTP auth, SMTP server and SMTP port
 		email_subject="CTLMON alert for $domain domain"
-		email_body="New certificates issued for $domain domain detected! \nReview the list of certificates below: \n\n$cert_names"
+		email_body="New certificates issued for $domain domain detected! \nReview the list of certificates below: \n\n$diff_cert_names"
 		# send the email
 		echo -e "$email_body" | mail -s "$email_subject" \
 			"$recipient_email" \
