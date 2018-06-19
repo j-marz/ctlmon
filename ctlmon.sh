@@ -121,10 +121,10 @@ function process_results {
 		else
 			log "results are different for $domain - analysing new data"
 			echo "results are different for $domain - analysing new data"
-			cert_names="$(grep '^{' "$crtsh_results" | jq '.name_value' | awk -F '"' '{print $2}')"
-			old_cert_names="$(grep '^{' "$existing_file" | jq '.name_value' | awk -F '"' '{print $2}')"
-			diff_cert_names="$(diff <(echo "$old_cert_names") <(echo "$cert_names") | grep '>' | awk -F '> ' '{print $2}')"
-			new_cert_count="$(echo "$diff_cert_names" | wc -l)"
+			certs="$(grep '^{' "$crtsh_results" | jq '. | "\(.name_value), \(.issuer_name)"' | awk -F "," '{print $1 "\t"$NF}' | tr -d '"')"
+			old_certs="$(grep '^{' "$existing_file" | jq '. | "\(.name_value), \(.issuer_name)"' | awk -F "," '{print $1 "\t"$NF}' | tr -d '"')"
+			diff_certs="$(diff <(echo "$old_certs") <(echo "$certs") | grep '>' | awk -F '> ' '{print $2}')"
+			new_cert_count="$(echo "$diff_certs" | wc -l)"
 			log "$new_cert_count new certificates found for $domain"
 			echo "$new_cert_count new certificates found for $domain"
 			# update changelog
@@ -132,7 +132,7 @@ function process_results {
 				date
 				echo "------------------------------------"
 				echo "$new_cert_count new certificates found for $domain"
-				echo "$diff_cert_names"
+				echo "$diff_certs"
 				echo "" 
 			} >> "$changelog"
 			mv "$existing_file" "$archive_file"
@@ -143,9 +143,9 @@ function process_results {
 	else
 		log "previous results for $domain not found - this is the first detection for $domain domain"
 		echo "previous results for $domain not found - this is the first detection for $domain domain"
-		cert_names="$(grep '^{' "$crtsh_results" | jq '.name_value' | awk -F '"' '{print $2}')"
-		diff_cert_names="$cert_names"	# hack to make emails consistent
-		new_cert_count="$(echo "$cert_names" | wc -l)"
+		certs="$(grep '^{' "$crtsh_results" | jq '. | "\(.name_value), \(.issuer_name)"' | awk -F "," '{print $1 "\t"$NF}' | tr -d '"')"
+		diff_certs="$certs"	# hack to make emails consistent
+		new_cert_count="$(echo "$certs" | wc -l)"
 		log "$new_cert_count new certificates found for $domain"
 		echo "$new_cert_count new certificates found for $domain"
 		# update changelog
@@ -153,7 +153,7 @@ function process_results {
 			date
 			echo "------------------------------------"
 			echo "$new_cert_count new certificates found for $domain"
-			echo "$cert_names"
+			echo "$certs"
 			echo ""
 		} >> "$changelog"
 		mv "$crtsh_results" "$existing_file"
@@ -190,7 +190,7 @@ function send_email {
 	else
 		#### TO DO #### need to add options for SMTP auth, SMTP server and SMTP port
 		email_subject="CTLMON alert for $domain domain"
-		email_body="New certificates issued for $domain domain detected! \nReview the list of certificates below: \n\n$diff_cert_names"
+		email_body="New certificates issued for $domain domain detected! \nReview the list of certificates below: \n\n$diff_certs"
 		# send the email
 		echo -e "$email_body" | mail -s "$email_subject" \
 			"$recipient_email" \
