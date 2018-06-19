@@ -23,7 +23,7 @@ domains="domains.txt"
 script_name="ctlmon.sh"
 syslog="/var/log/syslog"
 timestamp="$(date '+%Y_%m_%d__%H_%M_%S')"
-banner="CTLMON v0.1 - https://github.com/j-marz/ctlmon"
+banner="CTLMON v0.2 - https://github.com/j-marz/ctlmon"
 
 # import main configuration
 source "$config"
