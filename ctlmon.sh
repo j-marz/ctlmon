@@ -91,12 +91,12 @@ function check_rsp {
 		log "http status code: $1 - no certificates found for $domain"
 		echo "http status code: $1 - no certificates found for $domain"
 		# should add retry here incase server error
-		loop_control="continue"
+		return 1
 	else 
 		log "http status code: $1 - unknown response"
 		echo "http status code: $1 - unknown response"
 		# should add retry here incase server error
-		loop_control="continue"
+		return 1
 	fi
 }
 
@@ -117,7 +117,7 @@ function process_results {
 			echo "results are identical for $domain - no new certificates found"
 			log "skipping remaining checks for $domain"
 			echo "skipping remaining checks for $domain"
-			loop_control="continue"
+			return 1
 		else
 			log "results are different for $domain - analysing new data"
 			echo "results are different for $domain - analysing new data"
@@ -182,11 +182,11 @@ function send_email {
 	if [ -z "$recipient_email" ]; then
 		log "Recipient email missing from config - email notification will be skipped"
 		echo "Recipient email missing from config - email notification will be skipped"
-		loop_control="continue"
+		return 1
 	elif [ -z "$sender_email" ]; then
 		log "Sender email missing from config - email notification will be skipped"
 		echo "Sender email missing from config - email notification will be skipped"
-		loop_control="continue"
+		return 1
 	else
 		#### TO DO #### need to add options for SMTP auth, SMTP server and SMTP port
 		email_subject="CTLMON alert for $domain domain"
@@ -231,29 +231,11 @@ while read -r domain; do
 	# check http status code
 	declare -i crtsh_status	# only allow integer for http status code
 	crtsh_status="$(tail -n 1 "$crtsh_results")" # last line contains http_code from cURL
-	check_rsp "$crtsh_status"
-	# loop control for functions
-		if [[ $loop_control = "continue" ]]; then
-			# clear variable
-			loop_control=""
-			continue
-		fi
+	check_rsp "$crtsh_status" || continue
 	# analyse the crt.sh json and process files
-	process_results "$@"
-	# loop control for functions
-		if [[ $loop_control = "continue" ]]; then
-			# clear variable
-			loop_control=""
-			continue
-		fi
+	process_results "$@" || continue
 	# send email notification
-	send_email
-	# loop control for functions
-		if [[ $loop_control = "continue" ]]; then
-			# clear variable
-			loop_control=""
-			continue
-		fi
+	send_email || continue
 done < "$domains"
 
 # done
