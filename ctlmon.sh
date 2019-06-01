@@ -121,8 +121,8 @@ function process_results {
 		else
 			log "results are different for $domain - analysing new data"
 			echo "results are different for $domain - analysing new data"
-			certs="$(grep '^{' "$crtsh_results" | jq '. | "\(.name_value), \(.issuer_name)"' | awk -F "," '{print $1 "\t"$NF}' | tr -d '"')"
-			old_certs="$(grep '^{' "$existing_file" | jq '. | "\(.name_value), \(.issuer_name)"' | awk -F "," '{print $1 "\t"$NF}' | tr -d '"')"
+			certs="$(grep '^[{' "$crtsh_results" | jq '.[] | "\(.name_value), \(.issuer_name)"' | awk -F "," '{print $1 "\t"$NF}' | tr -d '"')"
+			old_certs="$(grep '^[{' "$existing_file" | jq '.[] | "\(.name_value), \(.issuer_name)"' | awk -F "," '{print $1 "\t"$NF}' | tr -d '"')"
 			diff_certs="$(diff <(echo "$old_certs") <(echo "$certs") | grep '>' | awk -F '> ' '{print $2}')"
 			new_cert_count="$(echo "$diff_certs" | wc -l)"
 			log "$new_cert_count new certificates found for $domain"
